@@ -1,5 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="description" content="Flashcards with spaced repetition: 10 languages, 90 courses, 1,600 words.">
+<meta name="theme-color" content="#E3D9CB" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1A1613" media="(prefers-color-scheme: dark)">
+<meta name="format-detection" content="telephone=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Cardsboard">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
 <title>Cardsboard</title>
-<meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&family=Unbounded:wght@500;600&display=swap">
 <style>
   /* Layout: one centered column, 440px max. Root: language list → course home → levels → topic → session/test.
@@ -812,15 +827,28 @@
 
   /* Устойчивый экран на телефоне */
   html, body { overscroll-behavior: none; overflow-x: clip; }
+  /* Страница не масштабируется: двойной тап не зумит, шрифт не раздувается при повороте, поля не вызывают автозум iOS */
+  html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; touch-action: manipulation; }
+  input, select, textarea { font-size: max(16px, 1em) !important; }
   .card { height: clamp(220px, calc(100vh - 345px), 460px); touch-action: none; }
-  @supports (height: 1dvh) { .card { height: clamp(220px, calc(100dvh - 345px), 460px); } }
+  @supports (height: 1dvh) { .card { height: clamp(200px, calc(100dvh - 360px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)), 460px); } }
   .ob-vp { min-height: 300px; }
-  .ob { min-height: calc(100vh - 58px); }
-  @supports (height: 1dvh) { .ob { min-height: calc(100dvh - 58px); } }
+  .ob { min-height: calc(100vh - 74px); }
+  @supports (height: 1dvh) { .ob { min-height: calc(100dvh - 74px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); } }
   @media (max-height: 700px) {
     .qcard { min-height: 150px; padding-top: 20px; padding-bottom: 18px; }
     .opt { min-height: 50px; }
     .ob { gap: 12px; }
+  }
+  @media (max-height: 760px) {
+    .ob-art { min-height: 0; gap: 12px; }
+    .ob-art > svg, .ob-art .karti-wrap svg { max-height: 150px; width: auto; }
+    .ob-slide { gap: 10px; }
+  }
+  @media (max-height: 600px) {
+    .ob-art > svg, .ob-art .karti-wrap svg { max-height: 112px; }
+    .ob-vp { min-height: 280px; }
+    .ob { gap: 8px; }
   }
 
   /* Пример на обороте карточки */
@@ -834,6 +862,8 @@
   .voice-pick select { min-height: 46px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font: inherit; font-weight: 500; padding: 0 10px; width: 100%; }
 </style>
 
+</head>
+<body>
 <div class="app">
   <button class="brand" id="brand" type="button" aria-label="Cardsboard">
     <svg viewBox="0 0 18 18" fill="none" aria-hidden="true">
@@ -7382,10 +7412,22 @@
   });
 
   // ===== 13. Старт =====
+  // Щипок двумя пальцами не масштабирует страницу (Safari игнорирует user-scalable=no)
+  try {
+    ["gesturestart", "gesturechange", "gestureend"].forEach(ev => document.addEventListener(ev, e => e.preventDefault(), { passive: false }));
+    document.addEventListener("touchmove", e => { if (e.touches && e.touches.length > 1) e.preventDefault(); }, { passive: false });
+    if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+  } catch (e) {}
   load();
   const startRoute = parseRoute(location.hash);
   setTimeout(clInit, 0);
   if (!settings.onboarded && !(location.hash || "").replace(/^#/, "")) { ob = { step: 0 }; applyRoute({ name: "intro" }); }
   else if (startRoute.name === "langs" && !(location.hash || "").replace(/^#/, "") && settings.visited && settings.course) applyRoute(parseRoute(settings.course));
+  // Незаконченная сессия, тренировка или тест не открываются сами: стартуем с главного экрана курса
+  else if (["session", "drill", "test", "classedit"].includes(startRoute.name) && settings.course) applyRoute(parseRoute(settings.course));
   else applyRoute(startRoute);
+  window.scrollTo(0, 0);
 </script>
+
+</body>
+</html>
